@@ -1,10 +1,9 @@
 from flask import Flask, render_template, request , redirect, url_for, flash # importar Flask, render_template, request, redirect, url_for, flash
 from forms import ContactForm # importar ContactForm de forms.py
-from flask_login import  LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy # importar SQLAlchemy
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 
 app = Flask(__name__)
 app.secret_key = 'your secret key' # clave secreta para la aplicacion
@@ -13,7 +12,52 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'  # Usamos SQLite
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desactivar el seguimiento de modificaciones (para evitar advertencias)
 db = SQLAlchemy(app)
 
-class User(db.Model):
+login_manager = LoginManager(app) 
+login_manager.login_view = 'login'  # Ruta para redirigir usuarios no autenticados
+login_manager.login_message = "Por favor, inicia sesión para acceder a esta página."
+login_manager.login_message_category = "info"
+
+@login_manager.user_loader # el decorador user_loader registra la funcion load_user
+def load_user(user_id):
+    return User.query.get(int(user_id)) # Cargar usuario por ID
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if(current_user.is_authenticated):
+        return redirect(url_for('home'))
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = User.query.filter_by(email=email).first() # Buscar usuario por correo electrónico
+        if user and user.check_password(password):
+            login_user(user)
+            next_page = request.args.get('next')# Redirigir a la página anterior
+            return redirect(next_page) if next_page else redirect(url_for('home'))
+        flash('correo o contraseña incorrectos', 'danger')
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))  # Si ya está autenticado, redirige a home
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash('El correo ya está registrado. Por favor, inicia sesión.', 'danger')
+            return redirect(url_for('login'))
+        new_user = User(username=username, email=email)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Cuenta creada con éxito. ¡Ahora puedes iniciar sesión!', 'success')
+        return redirect(url_for('login'))
+    return render_template('register.html')
+
+
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -40,6 +84,7 @@ class Task(db.Model):
         return f"Task('{self.title}', '{self.date_created}')" 
 
 @app.route('/tasks', methods=['GET'])
+@login_required
 def list_tasks(): # Listar todas las tareas
     tasks = Task.query.all() # Obtener todas las tareas
     return render_template('tasks.html', tasks=tasks)
@@ -85,11 +130,13 @@ def page_not_found(error):
 def internal_server_error(error):
     return render_template('500.html'), 500  # Página personalizada 500
 
-@app.route('/')
+@app.route('/home')
+@login_required
 def home():
-    return "¡Hola, Flask! Soy harti."
+    return "¡Bienvenido a la aplicacion. Estás en Home!"
  
 @app.route('/about')
+@login_required
 def about(): 
     return "Este es el about de mi aplicacion" # crear ruta hacia pagina about 
 
