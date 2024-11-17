@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Tasks</title>
+    </head>
+    <body>
+        <h1> Añadir nueva Tarea</h1>
+        <form method="POST">
+            <label for="title">Titulo</label>
+            <input type="text" name="title" id="title" required>
+            <br>
+            <label for="description">Descripción</label>
+            <input type="text" name="description" id="description" required>
+            <br>
+            <button type="submit">Añadir Tarea</button>
+        </form>
+        <a href="{{ url_for('list_tasks')}}">Volver a la lista de tareas</a> <!-- Volver a la lista de tareas -->
+    </body>
+</html>

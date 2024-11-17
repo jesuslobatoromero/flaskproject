@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Editar Tarea</title>
+    </head>
+    <body>
+        <h1> Editar Tarea</h1>
+        <form method="POST">
+            <label for="title">Titulo</label>
+            <input type="text" name="title" id="title" value="{{ task.title}}" required>
+            <br>
+            <label for="description">Descripción</label>
+            <input type="text" name="description" id="description" value="{{ task.description}}" required>
+            <br>
+            <button type="submit">Editar Tarea</button>
+        </form>
+        <a href="{{ url_for('list_tasks')}}">Volver a la lista de tareas</a> <!-- Volver a la lista de tareas -->
+    </body>
+</html>
+

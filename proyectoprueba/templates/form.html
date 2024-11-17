@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Formulario de Entrada</title>
+    </head>
+    <body>
+        <h1>Formulario de Entrada</h1>
+        <form  method="POST" action="{{ url_for('form')}}"> 
+            {{ form.hidden_tag() }}
+            <p>
+                {{ form.name.label }} 
+                {{ form.name() }} 
+                {% for error in form.name.errors %} #form.name.errors es el error que se encuentra en el archivo forms.py
+                    <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </p>
+            <p>
+                {{form.email.label}}
+                {{form.email()}} 
+                {% for error in form.email.errors%}
+                    <span style= "color: red;">[{{error}}]</span>
+                {% endfor %}
+            </p>
+            <p>{{ form.submit( )}}</p>
+        </form>
+    </body>
+</html>
