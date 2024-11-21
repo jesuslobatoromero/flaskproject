@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request , redirect, url_for, flash # importar Flask, render_template, request, redirect, url_for, flash
 from forms import ContactForm # importar ContactForm de forms.py
 from flask_sqlalchemy import SQLAlchemy # importar SQLAlchemy
-import datetime
+import datetime , time
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
+from flask_restful import Api, Resource, reqparse
 
 app = Flask(__name__)
 app.secret_key = 'your secret key' # clave secreta para la aplicacion
@@ -17,6 +18,60 @@ login_manager.login_view = 'login'  # Ruta para redirigir usuarios no autenticad
 login_manager.login_message = "Por favor, inicia sesión para acceder a esta página."
 login_manager.login_message_category = "info"
 
+api = Api(app)
+
+# Parser para los datos de los productos
+product_parser = reqparse.RequestParser()
+product_parser.add_argument('name', type=str, required=True, help='Name is required')
+product_parser.add_argument('price', type=float, required=True, help='Price is required')   
+product_parser.add_argument('description', type=str, required=True, help='Description is required') 
+
+# Recurso para un solo producto
+class ProductResource(Resource):
+    def get(self, product_id):
+        product = Product.query.get_or_404(product_id)
+        return {'id' : product.id, 'name' : product.name, 'price' : product.id, 'description': product.description}
+
+    def put(self, product_id):
+        args = Product.query.get_or_404()
+        product = Product.query.get_or_404(product_id)
+        product.name = args['name']
+        product.price = args['price']
+        product.description = args['description']
+        db.session.commit()
+        return {'message' : 'Product updated'}
+
+    def delete(self, product_id):
+        product = Product.query.get_or_404(product_id)
+        db.session.delete(product)
+        db.session.commit()
+        return {'message' : 'Product deleted'}
+
+# Recurso para la colección de productos
+class ProductListResource(Resource):
+    def get(self):
+        products = Product.query.all()
+        return [{'id': product.id, 'name': product.name, 'price': product.price, 'description': product.description} for product in products]
+
+    def post(self):
+        args = product_parser.parse_args()
+        new_product = Product(name=args['name'], price=args['price'], description=args['description'])
+        db.session.add(new_product)
+        db.session.commit()
+        return {'message': 'Product created', 'id': new_product.id}, 201
+    
+
+
+# Añadir los recursos a la API
+api.add_resource(ProductListResource, '/api/products')
+api.add_resource(ProductResource, '/api/products/<int:product_id>')
+        
+    
+
+     
+         
+
+
 @login_manager.user_loader # el decorador user_loader registra la funcion load_user
 def load_user(user_id):
     return User.query.get(int(user_id)) # Cargar usuario por ID
@@ -24,7 +79,8 @@ def load_user(user_id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if(current_user.is_authenticated):
-        return redirect(url_for('home'))
+        return redirect(url_for('home', user))
+    
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
@@ -35,6 +91,12 @@ def login():
             return redirect(next_page) if next_page else redirect(url_for('home'))
         flash('correo o contraseña incorrectos', 'danger')
     return render_template('login.html')
+
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    logout_user()
+    flash('Has cerrado sesión correctamente', 'success')
+    return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -56,7 +118,6 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
-
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -72,6 +133,16 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
     
+class Product(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(200), nullable=False)
+    date_created = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    
+    def __repr__(self):
+        return f"Product('{self.name}', '{self.price}')"
+
     
 
 class Task(db.Model):
@@ -130,10 +201,15 @@ def page_not_found(error):
 def internal_server_error(error):
     return render_template('500.html'), 500  # Página personalizada 500
 
+@app.route('/')
+@login_required
+def index():
+    return render_template('index.html')
+
 @app.route('/home')
 @login_required
 def home():
-    return "¡Bienvenido a la aplicacion. Estás en Home!"
+    return render_template('home.html')
  
 @app.route('/about')
 @login_required
@@ -149,6 +225,7 @@ def form():
         flash(f'Hola {name}!, con correo {email} tu formulario ha sido enviado con éxito')
         return redirect(url_for('submit', name= name, email = email))# redirigir a la pagina submit con el nombre y el correo
     return render_template('form.html', form=form) # retornar el template form.html
+
 @app.route('/submit', methods=['GET','POST']) # crear ruta hacia pagina submit
 def submit():
     if request.method == 'POST': 

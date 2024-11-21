@@ -1,20 +1,18 @@
-<!-- templates/404.html -->
- 
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Página no encontrada</title>
-</head>
-<body>
+    <title>Redirigiendo...</title>
     <script>
         // Redirige automáticamente a la página "home" después de 5 segundos
         setTimeout(() => {
             window.location.href = "{{ url_for('home') }}";
         }, 3000);
     </script>
-    <h1>¡Oops! Página no encontrada.</h1>
-    <p>Lo siento, no hemos podido encontrar la página que estás buscando.Redirigiendo en 3 segundos</p>
+</head>
+<body>
+    <h1>Esta ruta no es valida, redirigiendo al home</h1>
+    <p>Redirigiendo en 3 segundos...</p>
 </body>
 </html>
